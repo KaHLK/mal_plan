@@ -1,12 +1,17 @@
 use std::env;
 use std::str::FromStr;
 
+use serde::{Deserialize, Serialize};
+
 #[derive(Debug)]
 pub struct Options {
     pub save: bool,
     pub user: Option<String>,
     pub list: ListType,
     pub help: bool,
+    // TODO: Add the following options: no-cache, cache-age, not-found-file, not-finished-file, added-file, config-file, ignore-config
+    // TODO: Add commands to take another look at not-found & not-finished
+    // TODO: Add commands to sort ascending (default sort will be descending)
 }
 
 impl<'a> Options {
@@ -79,6 +84,21 @@ impl FromStr for ListType {
             "manga" => Ok(ListType::Manga),
             "anime" => Ok(ListType::Anime),
             val => Err(Error::ListError(String::from(val)).to_string()),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct Config {
+    pub user: String,
+    // TODO: Add fields: cache-age, not-found-file, not-finished-file, added-file
+}
+
+impl Config {
+    pub fn new() -> Config {
+        Config {
+            user: String::from(""),
         }
     }
 }
