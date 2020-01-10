@@ -1,6 +1,8 @@
 use std::env;
 use std::str::FromStr;
 
+pub mod manga;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug)]
@@ -119,4 +121,36 @@ impl<'a> ToString for Error {
             }
         }
     }
+}
+
+pub struct Item {
+    pub item_type: ItemType,
+    pub id: u32,
+    pub amount: u16,
+    pub publishing_status: u8,
+    pub url: String,
+    pub media_type: ItemMediaType,
+}
+
+pub enum ItemType {
+    Manga,
+    Anime,
+}
+
+pub enum ItemMediaType {
+    Manga,
+    Novel,
+    OneShot,
+    Doujinshi,
+    Manhwa,
+    Manhua,
+}
+
+pub trait IntoItem {
+    fn into_item(self) -> Item;
+}
+
+pub enum Sort {
+    Asc,
+    Desc,
 }

@@ -8,3 +8,5 @@ edition = "2018"
 serde = { version = "1.0.104", features = ["derive"] }
 serde_json = "1.0.44"
 directories = "2.0.2"
+attohttpc = "0.9.0"
+indicatif = "0.13.0"

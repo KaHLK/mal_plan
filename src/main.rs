@@ -1,10 +1,12 @@
-use mal_plan::{Config, Options};
+use mal_plan::manga;
+use mal_plan::{Config, Item, ListType, Options, Sort};
 
 use std::error::Error;
 use std::fs;
 use std::io;
 
 use directories::ProjectDirs;
+use indicatif::{ProgressBar, ProgressStyle};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut options = Options::from_args()?;
@@ -49,7 +51,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     if options.save {
         let mut config = Config::new();
 
-        config.user = options.user.unwrap();
+        config.user = options.user.clone().unwrap();
 
         let s = serde_json::to_string_pretty(&config)
             .unwrap_or_else(|e| panic!("Error occurred saving config file: {:?}", e));
@@ -58,7 +60,26 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     // TODO: Read cached list
-    // TODO: Fetch list from mal if cache is old or skippped
+
+    let spinner = ProgressBar::new_spinner();
+    spinner.enable_steady_tick(120);
+    spinner.set_style(
+        ProgressStyle::default_spinner()
+            .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])
+            .template("[{spinner:.green}] Loading with offset {msg}"),
+    );
+    // TODO: Only fetch list from mal if cache is old or skippped
+    let list: Vec<Item> = match options.list {
+        ListType::Manga => manga::fetch_all(options.user.unwrap(), Sort::Desc, |offset| {
+            spinner.set_message(&format!("{}", offset))
+        })?
+        .iter()
+        .map(|m| m.into())
+        .collect(),
+        ListType::Anime => unimplemented!(),
+    };
+    spinner.finish_with_message(&format!("Finished loading {} items", list.len()));
+
     // TODO: Cache list fetched from mal (only if new list was fetched)
     // TODO: Load already handled items from files (added, not-found, not-finished)
     // TODO: Remove already handled items from list
