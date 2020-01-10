@@ -3,7 +3,6 @@ use std::str::FromStr;
 
 #[derive(Debug)]
 pub struct Options {
-    pub interactive: bool,
     pub save: bool,
     pub user: Option<String>,
     pub list: ListType,
@@ -13,7 +12,6 @@ pub struct Options {
 impl<'a> Options {
     pub fn from_args() -> Result<Options, String> {
         let mut options = Options {
-            interactive: false,
             save: false,
             user: None,
             list: ListType::Manga,
@@ -25,7 +23,6 @@ impl<'a> Options {
             match &arg[..] {
                 "--help" => options.set_help(),
                 "--save" => options.set_save(),
-                "--interactive" => options.set_interactive(),
                 "--user" => {
                     if let Some(user) = args.next() {
                         options.user = Some(user);
@@ -46,7 +43,6 @@ impl<'a> Options {
                             match c {
                                 'h' => options.set_help(),
                                 's' => options.set_save(),
-                                'i' => options.set_interactive(),
                                 _ => return Err(Error::ArgumentError(arg).to_string()),
                             }
                         }
@@ -66,10 +62,6 @@ impl<'a> Options {
 
     fn set_save(&mut self) {
         self.save = true;
-    }
-
-    fn set_interactive(&mut self) {
-        self.interactive = true;
     }
 }
 
