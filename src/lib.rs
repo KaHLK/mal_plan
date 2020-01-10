@@ -10,17 +10,6 @@ pub struct Options {
     pub help: bool,
 }
 
-#[derive(Debug)]
-pub enum ListType {
-    Manga,
-    Anime,
-}
-
-pub enum Error {
-    ArgumentError(String),
-    ListError(String),
-}
-
 impl<'a> Options {
     pub fn from_args() -> Result<Options, String> {
         let mut options = Options {
@@ -84,6 +73,12 @@ impl<'a> Options {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub enum ListType {
+    Manga,
+    Anime,
+}
+
 impl FromStr for ListType {
     type Err = String;
 
@@ -94,6 +89,11 @@ impl FromStr for ListType {
             val => Err(Error::ListError(String::from(val)).to_string()),
         }
     }
+}
+
+pub enum Error {
+    ArgumentError(String),
+    ListError(String),
 }
 
 impl<'a> ToString for Error {
