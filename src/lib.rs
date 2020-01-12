@@ -56,11 +56,11 @@ impl<'a> Options {
                             match c {
                                 'h' => options.set_help(),
                                 's' => options.set_save(),
-                                _ => return Err(Error::ArgumentError(arg).to_string()),
+                                _ => return Err(String::from(Error::ArgumentError(arg))),
                             }
                         }
                     } else {
-                        return Err(Error::ArgumentError(arg).to_string());
+                        return Err(String::from(Error::ArgumentError(arg)));
                     }
                 }
             }
@@ -91,7 +91,7 @@ impl FromStr for ListType {
         match &s.to_lowercase()[..] {
             "manga" => Ok(ListType::Manga),
             "anime" => Ok(ListType::Anime),
-            val => Err(Error::ListError(String::from(val)).to_string()),
+            val => Err(String::from(Error::ListError(String::from(val)))),
         }
     }
 }
@@ -117,11 +117,12 @@ pub enum Error {
     FileError(PathBuf, io::Error),
     FileReadError(PathBuf, io::Error),
     FileWriteError(PathBuf, io::Error),
+    SerdeError(serde_json::Error),
 }
 
-impl<'a> ToString for Error {
-    fn to_string(&self) -> String {
-        match self {
+impl From<Error> for String {
+    fn from(err: Error) -> Self {
+        match err {
             Error::ArgumentError(val) => {
                 format!("Unknown argument {}. Use --help to see all options", val)
             }
@@ -192,20 +193,20 @@ impl Cache {
 
 pub fn read_file(dir: &Path, file: &str) -> Result<String> {
     let path = dir.join(file);
-    fs::read_to_string(&path).map_err(|e| Error::FileReadError(path, e).to_string())
+    fs::read_to_string(&path).map_err(|e| String::from(Error::FileReadError(path, e)))
 }
 
 pub fn write_file(dir: &Path, file: &str, content: String) -> Result<()> {
     let path = dir.join(file);
-    fs::create_dir_all(&dir).map_err(|e| Error::FileError(path.clone(), e).to_string())?;
+    fs::create_dir_all(&dir).map_err(|e| String::from(Error::FileError(path.clone(), e)))?;
 
     let mut f = OpenOptions::new()
         .write(true)
         .create(true)
         .truncate(true)
         .open(&path)
-        .map_err(|e| Error::FileError(path.clone(), e).to_string())?;
+        .map_err(|e| String::from(Error::FileError(path.clone(), e)))?;
     f.write_all(content.as_bytes())
-        .map_err(|e| Error::FileWriteError(path.clone(), e).to_string())?;
+        .map_err(|e| String::from(Error::FileWriteError(path.clone(), e)))?;
     Ok(())
 }
