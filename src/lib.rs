@@ -1,9 +1,15 @@
 use std::env;
+use std::fs::{self, OpenOptions};
+use std::io::{self, Write};
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
+use std::time::Duration;
 
 pub mod manga;
 
 use serde::{Deserialize, Serialize};
+
+type Result<T> = std::result::Result<T, String>;
 
 #[derive(Debug)]
 pub struct Options {
@@ -17,7 +23,7 @@ pub struct Options {
 }
 
 impl<'a> Options {
-    pub fn from_args() -> Result<Options, String> {
+    pub fn from_args() -> Result<Options> {
         let mut options = Options {
             save: false,
             user: None,
@@ -81,7 +87,7 @@ pub enum ListType {
 impl FromStr for ListType {
     type Err = String;
 
-    fn from_str(s: &str) -> Result<ListType, Self::Err> {
+    fn from_str(s: &str) -> Result<ListType> {
         match &s.to_lowercase()[..] {
             "manga" => Ok(ListType::Manga),
             "anime" => Ok(ListType::Anime),
