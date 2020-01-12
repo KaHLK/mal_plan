@@ -1,4 +1,4 @@
-use super::{Item, ItemMediaType, ItemType, Sort};
+use super::{Item, ItemMediaType, ListType, Sort};
 
 use std::error::Error;
 
@@ -29,7 +29,7 @@ enum MangaType {
 impl From<&Manga> for Item {
     fn from(manga: &Manga) -> Item {
         Item {
-            item_type: ItemType::Manga,
+            item_type: ListType::Manga,
             id: manga.manga_id,
             amount: manga.manga_num_chapters,
             publishing_status: manga.manga_publishing_status,

@@ -3,7 +3,10 @@ use std::io;
 use std::time::SystemTime;
 
 use mal_plan::manga;
-use mal_plan::{Cache, Config, InputOptions, Item, ListType, Options, Sort};
+use mal_plan::{
+    read_handled_items, write_handled_items, Cache, Config, HandledItem, InputOptions, Item,
+    ListType, Options, Sort,
+};
 
 use directories::ProjectDirs;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -22,8 +25,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         Some(dir) => dir,
         None => return Err("Failed to load config directory")?,
     };
-
     let config_dir = project_dirs.config_dir();
+    let cache_dir = project_dirs.cache_dir();
+    let data_dir = project_dirs.data_dir();
+
     let config = Config::read(config_dir);
 
     if let Some(config) = config {
@@ -59,13 +64,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         ListType::Manga => "manga",
         ListType::Anime => "anime",
     };
-    let cache_dir = project_dirs.cache_dir();
     let cache = Cache::read(cache_dir, file_prefix);
     let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
+
+    let handled = read_handled_items(data_dir);
     // TODO: Load already handled items from files (added, not-found, not-finished)
 
     // Check if cache has gotten stale
-    let list = if let Some(cache) = cache
+    let (list, handled) = if let Some(cache) = cache
         .filter(|c| c.user == options.user)
         .map(|c| now.checked_sub(c.fetched_at).map(|diff| (c, diff)))
         .flatten()
@@ -77,7 +83,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         }) {
         // Cache is still fresh so use list from cache
-        cache.list
+        (cache.list, handled)
     } else {
         // Cache has gotten stale so fetch new list (with fancy spinner to show that we are not frozen)
         let spinner = ProgressBar::new_spinner();
@@ -97,14 +103,40 @@ fn main() -> Result<(), Box<dyn Error>> {
             ListType::Anime => unimplemented!(),
         };
         spinner.finish_with_message(&format!("Finished loading {} items", list.len()));
-        list
-        // TODO: Remove already handled items from list
-        // TODO: Remove handled items that no longer exists in list
+        let handled: Vec<HandledItem> = handled
+            .into_iter()
+            .filter(|h| {
+                if h.item_type != options.list {
+                    true
+                } else {
+                    for i in 0..list.len() {
+                        if h.item_id == list[i].id {
+                            return false;
+                        }
+                    }
+                    true
+                }
+            })
+            .collect();
+        let list: Vec<Item> = list
+            .into_iter()
+            .filter(|item| item.publishing_status == 2)
+            .filter(|item| {
+                for i in 0..handled.len() {
+                    if item.id == handled[i].item_id {
+                        return false;
+                    }
+                }
+                true
+            })
+            .collect();
+        (list, handled)
     };
 
     // TODO: Loop over list and get user input for each item
     // TODO: Save handled items
 
+    write_handled_items(data_dir, &handled)?;
     let cache = Cache::new(now, options.user, list);
     cache.write(cache_dir, file_prefix)?;
     Ok(())

@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 
 const CONFIG_FILE: &str = "config.json";
 const CACHE_FILE: &str = "cache.json";
+const HANDLED_FILE: &str = "handled.json";
 
 type Result<T> = std::result::Result<T, String>;
 
@@ -20,7 +21,7 @@ pub struct InputOptions {
     pub user: Option<String>,
     pub list: ListType,
     pub help: bool,
-    // TODO: Add the following options: no-cache, cache-age, not-found-file, not-finished-file, added-file, config-file, ignore-config
+    // TODO: Add the following options: no-cache, cache-age, handled-file, config-file, ignore-config
     // TODO: Add commands to take another look at not-found & not-finished
     // TODO: Add commands to sort ascending (default sort will be descending)
 }
@@ -97,7 +98,7 @@ impl From<InputOptions> for Options {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum ListType {
     Manga,
     Anime,
@@ -119,7 +120,7 @@ impl FromStr for ListType {
 #[serde(rename_all = "snake_case")]
 pub struct Config {
     pub user: String,
-    // TODO: Add fields: cache-age, not-found-file, not-finished-file, added-file
+    // TODO: Add fields: cache-age, handled-file
 }
 
 impl Config {
@@ -184,7 +185,7 @@ impl From<Error> for String {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Item {
-    pub item_type: ItemType,
+    pub item_type: ListType,
     pub id: u32,
     pub amount: u16,
     pub publishing_status: u8,
@@ -192,10 +193,14 @@ pub struct Item {
     pub media_type: ItemMediaType,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub enum ItemType {
-    Manga,
-    Anime,
+impl Item {
+    pub fn handle(self, how: HandledHow) -> HandledItem {
+        HandledItem {
+            item_id: self.id,
+            item_type: self.item_type,
+            how,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -206,6 +211,30 @@ pub enum ItemMediaType {
     Doujinshi,
     Manhwa,
     Manhua,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HandledItem {
+    pub item_id: u32,
+    pub item_type: ListType,
+    pub how: HandledHow,
+}
+
+pub fn read_handled_items(dir: &Path) -> Vec<HandledItem> {
+    read_file(dir, HANDLED_FILE)
+        .and_then(|s| de(&s))
+        .unwrap_or(vec![])
+}
+
+pub fn write_handled_items(dir: &Path, content: &Vec<HandledItem>) -> Result<()> {
+    se(content).and_then(|s| write_file(dir, HANDLED_FILE, s))
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum HandledHow {
+    Added,
+    NotFound,
+    NotFinished,
 }
 
 pub enum Sort {
