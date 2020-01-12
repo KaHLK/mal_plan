@@ -9,6 +9,9 @@ pub mod manga;
 
 use serde::{Deserialize, Serialize};
 
+const CONFIG_FILE: &str = "config.json";
+const CACHE_FILE: &str = "cache.json";
+
 type Result<T> = std::result::Result<T, String>;
 
 #[derive(Debug)]
@@ -125,6 +128,14 @@ impl Config {
             user: String::from(""),
         }
     }
+
+    pub fn read(dir: &Path) -> Option<Config> {
+        read_file(dir, CONFIG_FILE).and_then(|s| de(&s)).ok()
+    }
+
+    pub fn write(&self, dir: &Path) -> Result<()> {
+        se(self).and_then(|s| write_file(dir, CONFIG_FILE, s))
+    }
 }
 
 pub enum Error {
@@ -133,7 +144,8 @@ pub enum Error {
     FileError(PathBuf, io::Error),
     FileReadError(PathBuf, io::Error),
     FileWriteError(PathBuf, io::Error),
-    SerdeError(serde_json::Error),
+    SerdeDeError(serde_json::Error),
+    SerdeSerError(serde_json::Error),
 }
 
 impl From<Error> for String {
@@ -160,6 +172,12 @@ impl From<Error> for String {
                 val.to_str(),
                 err
             ),
+            Error::SerdeDeError(err) => {
+                format!("An error occurred when trying to deserialize: {:?}", err)
+            }
+            Error::SerdeSerError(err) => {
+                format!("An error occurred when trying to serialize: {:?}", err)
+            }
         }
     }
 }
@@ -210,14 +228,28 @@ impl Cache {
             user,
         }
     }
+
+    pub fn read(dir: &Path, prefix: &str) -> Option<Self> {
+        let file = Self::get_file(prefix);
+        read_file(dir, &file).and_then(|s| de(&s)).ok()
+    }
+
+    pub fn write(&self, dir: &Path, prefix: &str) -> Result<()> {
+        let file = Self::get_file(prefix);
+        se(self).and_then(|s| write_file(dir, &file, s))
+    }
+
+    fn get_file(prefix: &str) -> String {
+        format!("{}_{}", prefix, CACHE_FILE)
+    }
 }
 
-pub fn read_file(dir: &Path, file: &str) -> Result<String> {
+fn read_file(dir: &Path, file: &str) -> Result<String> {
     let path = dir.join(file);
     fs::read_to_string(&path).map_err(|e| String::from(Error::FileReadError(path, e)))
 }
 
-pub fn write_file(dir: &Path, file: &str, content: String) -> Result<()> {
+fn write_file(dir: &Path, file: &str, content: String) -> Result<()> {
     let path = dir.join(file);
     fs::create_dir_all(&dir).map_err(|e| String::from(Error::FileError(path.clone(), e)))?;
 
@@ -230,4 +262,18 @@ pub fn write_file(dir: &Path, file: &str, content: String) -> Result<()> {
     f.write_all(content.as_bytes())
         .map_err(|e| String::from(Error::FileWriteError(path.clone(), e)))?;
     Ok(())
+}
+
+fn de<'a, T>(s: &'a str) -> Result<T>
+where
+    T: Deserialize<'a>,
+{
+    serde_json::from_str::<T>(s).map_err(|e| String::from(Error::SerdeDeError(e)))
+}
+
+fn se<T>(v: &T) -> Result<String>
+where
+    T: Serialize,
+{
+    serde_json::to_string(v).map_err(|e| String::from(Error::SerdeSerError(e)))
 }
