@@ -114,6 +114,9 @@ impl Config {
 pub enum Error {
     ArgumentError(String),
     ListError(String),
+    FileError(PathBuf, io::Error),
+    FileReadError(PathBuf, io::Error),
+    FileWriteError(PathBuf, io::Error),
 }
 
 impl<'a> ToString for Error {
@@ -125,10 +128,26 @@ impl<'a> ToString for Error {
             Error::ListError(val) => {
                 format!("Unknown list type {}. allowed values: manga, anime", val)
             }
+            Error::FileError(val, err) => format!(
+                "An error occurred when trying to interact with file '{:?}'. {}",
+                val.to_str(),
+                err
+            ),
+            Error::FileReadError(val, err) => format!(
+                "An error occurred when trying to read from file '{:?}'. {}",
+                val.to_str(),
+                err
+            ),
+            Error::FileWriteError(val, err) => format!(
+                "An error occurred when trying to write to file '{:?}'. {}",
+                val.to_str(),
+                err
+            ),
         }
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Item {
     pub item_type: ItemType,
     pub id: u32,
@@ -138,11 +157,13 @@ pub struct Item {
     pub media_type: ItemMediaType,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub enum ItemType {
     Manga,
     Anime,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub enum ItemMediaType {
     Manga,
     Novel,
@@ -152,11 +173,39 @@ pub enum ItemMediaType {
     Manhua,
 }
 
-pub trait IntoItem {
-    fn into_item(self) -> Item;
-}
-
 pub enum Sort {
     Asc,
     Desc,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Cache {
+    pub fetched_at: Duration,
+    pub list: Vec<Item>,
+}
+
+impl Cache {
+    pub fn new(fetched_at: Duration, list: Vec<Item>) -> Cache {
+        Cache { fetched_at, list }
+    }
+}
+
+pub fn read_file(dir: &Path, file: &str) -> Result<String> {
+    let path = dir.join(file);
+    fs::read_to_string(&path).map_err(|e| Error::FileReadError(path, e).to_string())
+}
+
+pub fn write_file(dir: &Path, file: &str, content: String) -> Result<()> {
+    let path = dir.join(file);
+    fs::create_dir_all(&dir).map_err(|e| Error::FileError(path.clone(), e).to_string())?;
+
+    let mut f = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(&path)
+        .map_err(|e| Error::FileError(path.clone(), e).to_string())?;
+    f.write_all(content.as_bytes())
+        .map_err(|e| Error::FileWriteError(path.clone(), e).to_string())?;
+    Ok(())
 }

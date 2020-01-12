@@ -1,4 +1,4 @@
-use super::{IntoItem, Item, ItemMediaType, ItemType, Sort};
+use super::{Item, ItemMediaType, ItemType, Sort};
 
 use std::error::Error;
 
