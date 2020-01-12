@@ -76,10 +76,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         .ok()
         .flatten();
     let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
+    // TODO: Load already handled items from files (added, not-found, not-finished)
 
     // Check if cache has gotten stale
     let list = if let Some(cache) = cache
-        // TODO: Also check if username is the same as the run requested in this run (save to different cache files?)
+        .filter(|c| c.user == options.user)
         .map(|c| now.checked_sub(c.fetched_at).map(|diff| (c, diff)))
         .flatten()
         .and_then(|(c, diff)| {
@@ -101,7 +102,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .template("[{spinner:.green}] Loading with offset {msg}"),
         );
         let list: Vec<Item> = match options.list {
-            ListType::Manga => manga::fetch_all(options.user, Sort::Desc, |offset| {
+            ListType::Manga => manga::fetch_all(options.user.clone(), Sort::Desc, |offset| {
                 spinner.set_message(&format!("{}", offset))
             })?
             .iter()
@@ -111,15 +112,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         };
         spinner.finish_with_message(&format!("Finished loading {} items", list.len()));
         list
+        // TODO: Remove already handled items from list
+        // TODO: Remove handled items that no longer exists in list
     };
 
-    // TODO: Load already handled items from files (added, not-found, not-finished)
-    // TODO: Remove already handled items from list
-    // TODO: Remove handled items that no longer exists in list
     // TODO: Loop over list and get user input for each item
     // TODO: Save handled items
 
-    let cache = Cache::new(now, list);
+    let cache = Cache::new(now, options.user, list);
     let s = serde_json::to_string(&cache)?;
     write_file(cache_dir, &cache_file, s)?;
     Ok(())

@@ -198,12 +198,17 @@ pub enum Sort {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Cache {
     pub fetched_at: Duration,
+    pub user: String,
     pub list: Vec<Item>,
 }
 
 impl Cache {
-    pub fn new(fetched_at: Duration, list: Vec<Item>) -> Cache {
-        Cache { fetched_at, list }
+    pub fn new(fetched_at: Duration, user: String, list: Vec<Item>) -> Self {
+        Cache {
+            fetched_at,
+            list,
+            user,
+        }
     }
 }
 
