@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 type Result<T> = std::result::Result<T, String>;
 
 #[derive(Debug)]
-pub struct Options {
+pub struct InputOptions {
     pub save: bool,
     pub user: Option<String>,
     pub list: ListType,
@@ -22,9 +22,9 @@ pub struct Options {
     // TODO: Add commands to sort ascending (default sort will be descending)
 }
 
-impl<'a> Options {
-    pub fn from_args() -> Result<Options> {
-        let mut options = Options {
+impl<'a> InputOptions {
+    pub fn from_args() -> Result<InputOptions> {
+        let mut options = InputOptions {
             save: false,
             user: None,
             list: ListType::Manga,
@@ -75,6 +75,22 @@ impl<'a> Options {
 
     fn set_save(&mut self) {
         self.save = true;
+    }
+}
+
+pub struct Options {
+    pub save: bool,
+    pub user: String,
+    pub list: ListType,
+}
+
+impl From<InputOptions> for Options {
+    fn from(input: InputOptions) -> Self {
+        Options {
+            save: input.save,
+            user: input.user.unwrap(),
+            list: input.list,
+        }
     }
 }
 

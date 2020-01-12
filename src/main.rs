@@ -3,7 +3,7 @@ use std::io;
 use std::time::SystemTime;
 
 use mal_plan::manga;
-use mal_plan::{read_file, write_file, Cache, Config, Item, ListType, Options, Sort};
+use mal_plan::{read_file, write_file, Cache, Config, InputOptions, Item, ListType, Options, Sort};
 
 use directories::ProjectDirs;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -13,7 +13,7 @@ const CACHE_FILE: &str = "cache.json";
 const MAX_CACHE_AGE: u64 = 60 * 60 * 24 * 3;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut options = Options::from_args()?;
+    let mut options = InputOptions::from_args()?;
 
     if options.help {
         // TODO: Impl
@@ -49,13 +49,15 @@ fn main() -> Result<(), Box<dyn Error>> {
                 _ => break,
             }
         }
-        options.user = input.lines().next().map(|s| String::from(s));
+        options.user = Some(String::from(input.trim()));
     }
+
+    let options: Options = options.into();
 
     if options.save {
         let mut config = Config::new();
 
-        config.user = options.user.clone().unwrap();
+        config.user = options.user.clone();
 
         let s = serde_json::to_string(&config)
             .unwrap_or_else(|e| panic!("Error occurred saving config file: {:?}", e));
@@ -99,7 +101,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .template("[{spinner:.green}] Loading with offset {msg}"),
         );
         let list: Vec<Item> = match options.list {
-            ListType::Manga => manga::fetch_all(options.user.unwrap(), Sort::Desc, |offset| {
+            ListType::Manga => manga::fetch_all(options.user, Sort::Desc, |offset| {
                 spinner.set_message(&format!("{}", offset))
             })?
             .iter()
