@@ -94,7 +94,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .template("[{spinner:.green}] Loading with offset {msg}"),
         );
         let list: Vec<Item> = match options.list {
-            ListType::Manga => manga::fetch_all(options.user.clone(), Sort::Desc, |offset| {
+            ListType::Manga => manga::fetch_all(options.user.clone(), |offset| {
                 spinner.set_message(&format!("{}", offset))
             })?
             .iter()
@@ -118,7 +118,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 }
             })
             .collect();
-        let list: Vec<Item> = list
+        let mut list: Vec<Item> = list
             .into_iter()
             .filter(|item| item.publishing_status == 2)
             .filter(|item| {
@@ -130,6 +130,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 true
             })
             .collect();
+        list.sort_by_key(|i| i.amount * Sort::Desc.value());
         (list, handled)
     };
 

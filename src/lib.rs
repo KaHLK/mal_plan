@@ -187,7 +187,7 @@ impl From<Error> for String {
 pub struct Item {
     pub item_type: ListType,
     pub id: u32,
-    pub amount: u16,
+    pub amount: i16,
     pub title: String,
     pub publishing_status: u8,
     pub url: String,
@@ -241,6 +241,15 @@ pub enum HandledHow {
 pub enum Sort {
     Asc,
     Desc,
+}
+
+impl Sort {
+    pub fn value(self) -> i16 {
+        match self {
+            Sort::Asc => 1,
+            Sort::Desc => -1,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
