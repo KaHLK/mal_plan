@@ -188,6 +188,7 @@ pub struct Item {
     pub item_type: ListType,
     pub id: u32,
     pub amount: u16,
+    pub title: String,
     pub publishing_status: u8,
     pub url: String,
     pub media_type: ItemMediaType,
@@ -305,4 +306,20 @@ where
     T: Serialize,
 {
     serde_json::to_string(v).map_err(|e| String::from(Error::SerdeSerError(e)))
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(untagged)]
+enum StrNum {
+    String(String),
+    Num(i64),
+}
+
+impl StrNum {
+    fn to_string(&self) -> String {
+        match self {
+            StrNum::String(v) => v.clone(),
+            StrNum::Num(v) => v.to_string(),
+        }
+    }
 }

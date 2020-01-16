@@ -9,6 +9,7 @@ pub struct Manga {
     id: u32,
     status: u8,
     manga_id: u32,
+    manga_title: StrNum,
     manga_num_chapters: u16,
     manga_publishing_status: u8,
     manga_url: String,
@@ -31,6 +32,7 @@ impl From<&Manga> for Item {
         Item {
             item_type: ListType::Manga,
             id: manga.manga_id,
+            title: manga.manga_title.to_string(),
             amount: manga.manga_num_chapters,
             publishing_status: manga.manga_publishing_status,
             url: manga.manga_url.clone(),
