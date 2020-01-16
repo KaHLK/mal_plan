@@ -1,13 +1,13 @@
 use std::error::Error;
-use std::io;
 use std::time::SystemTime;
 
 use mal_plan::manga;
 use mal_plan::{
-    read_handled_items, write_handled_items, Cache, Config, HandledItem, InputOptions, Item,
-    ListType, Options, Sort,
+    read_handled_items, write_handled_items, Cache, Config, HandledHow, HandledItem, InputOptions,
+    Item, ListType, Options, Sort,
 };
 
+use console::Term;
 use directories::ProjectDirs;
 use indicatif::{ProgressBar, ProgressStyle};
 
@@ -20,6 +20,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         // TODO: Impl
         return Ok(());
     }
+
+    let term = Term::stdout();
 
     let project_dirs = match ProjectDirs::from("com", "kahlk", "mal_plan") {
         Some(dir) => dir,
@@ -38,18 +40,21 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     if options.user.is_none() {
-        println!("Username must be specified. Please enter a username:");
-        let mut input = String::new();
+        term.write_line("Username must be specified. Please enter a username:")?;
         loop {
-            match io::stdin().read_line(&mut input) {
-                Err(e) => println!(
-                    "An error occurred parsing your input {}\nSuccessfully read: {}\nPlease try again:",
-                    e, input
-                ),
-                _ => break,
+            match term.read_line() {
+                Ok(input) => {
+                    options.user = Some(input);
+                    break;
+                }
+                Err(e) => {
+                    term.write_str(&format!(
+                        "An error occurred parsing your input {}\nPlease try again:",
+                        e
+                    ))?;
+                }
             }
         }
-        options.user = Some(String::from(input.trim()));
     }
 
     let options: Options = options.into();
@@ -68,10 +73,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
 
     let handled = read_handled_items(data_dir);
-    // TODO: Load already handled items from files (added, not-found, not-finished)
 
     // Check if cache has gotten stale
-    let (list, handled) = if let Some(cache) = cache
+    let (list, mut handled) = if let Some(cache) = cache
         .filter(|c| c.user == options.user)
         .map(|c| now.checked_sub(c.fetched_at).map(|diff| (c, diff)))
         .flatten()
@@ -91,7 +95,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         spinner.set_style(
             ProgressStyle::default_spinner()
                 .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])
-                .template("[{spinner:.green}] Loading with offset {msg}"),
+                .template(&format!(
+                    "[{{spinner:.green}}] Fetching list for {} with offset {{msg}}",
+                    options.user
+                )),
         );
         let list: Vec<Item> = match options.list {
             ListType::Manga => manga::fetch_all(options.user.clone(), |offset| {
@@ -111,10 +118,10 @@ fn main() -> Result<(), Box<dyn Error>> {
                 } else {
                     for i in 0..list.len() {
                         if h.item_id == list[i].id {
-                            return false;
+                            return true;
                         }
                     }
-                    true
+                    false
                 }
             })
             .collect();
@@ -134,11 +141,67 @@ fn main() -> Result<(), Box<dyn Error>> {
         (list, handled)
     };
 
-    // TODO: Loop over list and get user input for each item
-    // TODO: Save handled items
+    let mut quitting = false;
+    let mut remaining: Vec<Item> = vec![];
+    for item in list {
+        // TODO: Make printing prettier?
+        if quitting {
+            remaining.push(item);
+            continue;
+        }
+        term.write_line(&format!(
+            "Current {list:?}: {amount:>width$} | {title}",
+            list = options.list,
+            amount = item.amount,
+            title = item.title,
+            width = 4
+        ))?;
+
+        loop {
+            term.write_line("\nWhat do you want to do? (d/e/n/s/h/q)")?;
+            match term.read_char()? {
+                'd' => {
+                    handled.push(item.handle(HandledHow::Added));
+                    break;
+                }
+                'e' => {
+                    handled.push(item.handle(HandledHow::NotFound));
+                    break;
+                }
+                'n' => {
+                    handled.push(item.handle(HandledHow::NotFinished));
+                    break;
+                }
+                's' => {
+                    remaining.push(item);
+                    break;
+                }
+                'h' => {
+                    term.write_line(
+                        "\nYou can do the following:
+    d: Mark the current item as 'downloaded'
+    e: Mark the current item as 'not found'
+    n: Mark the current item as 'not finished'
+    s: Skip the current item
+    h: Display the current message
+
+    q: Quit",
+                    )?;
+                    continue;
+                }
+                'q' => {
+                    quitting = true;
+                    break;
+                }
+                v => {
+                    term.write_line(&format!("Unknown input '{}'. Press 'h' for help", v))?;
+                }
+            }
+        }
+    }
 
     write_handled_items(data_dir, &handled)?;
-    let cache = Cache::new(now, options.user, list);
+    let cache = Cache::new(now, options.user, remaining);
     cache.write(cache_dir, file_prefix)?;
     Ok(())
 }
