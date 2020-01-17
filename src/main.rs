@@ -212,6 +212,7 @@ You can do the following:
                     continue;
                 }
                 'q' => {
+                    remaining.push(item);
                     quitting = true;
                     break;
                 }
