@@ -128,14 +128,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         let mut list: Vec<Item> = list
             .into_iter()
             .filter(|item| item.publishing_status == 2)
-            .filter(|item| {
-                for i in 0..handled.len() {
-                    if item.id == handled[i].item_id {
-                        return false;
-                    }
-                }
-                true
-            })
             .collect();
         list.sort_by_key(|i| i.amount * Sort::Desc.value());
         (list, handled)
@@ -144,12 +136,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("Currently finished {:?}: {}", options.list, list.len());
     println!("Already handled: {}\n", handled.len());
 
+    let handled_id: Vec<u32> = handled.iter().map(|i| i.item_id).collect();
     let mut quitting = false;
     let mut remaining: Vec<Item> = vec![];
     let mut clear = 0;
     for item in list {
         // TODO: Make printing prettier?
-        if quitting {
+
+        if quitting || handled_id.contains(&item.id) {
             remaining.push(item);
             continue;
         }
