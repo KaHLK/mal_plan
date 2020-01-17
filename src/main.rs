@@ -30,6 +30,7 @@ OPTIONS:
     --list      Specify the list to be fetched. Available options are: Anime, Manga [Default].
     --anime     Shorthand for: --list anime.
     --manga     SHorthand for: --list manga.
+    --sort      Sort the list by chapter count in the direction specified. Available options are: Asc, Desc [Default].
 
     -h, --help  Display this message.
         "
@@ -145,7 +146,8 @@ OPTIONS:
             .into_iter()
             .filter(|item| item.publishing_status == 2)
             .collect();
-        list.sort_by_key(|i| i.amount * Sort::Desc.value());
+        let sort = options.sort.value();
+        list.sort_by_key(|i| i.amount * sort);
         (list, handled)
     };
 

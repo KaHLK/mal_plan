@@ -21,9 +21,9 @@ pub struct InputOptions {
     pub user: Option<String>,
     pub list: ListType,
     pub help: bool,
+    pub sort: Sort,
     // TODO: Add the following options: no-cache, cache-age, handled-file, config-file, ignore-config
     // TODO: Add commands to take another look at not-found & not-finished
-    // TODO: Add commands to sort ascending (default sort will be descending)
 }
 
 impl<'a> InputOptions {
@@ -33,6 +33,7 @@ impl<'a> InputOptions {
             user: None,
             list: ListType::Manga,
             help: false,
+            sort: Sort::Desc,
         };
 
         let mut args = env::args().into_iter().skip(1);
@@ -47,12 +48,18 @@ impl<'a> InputOptions {
                 }
                 "--list" => {
                     if let Some(list) = args.next() {
-                        options.list = ListType::from_str(&list[..])?;
+                        options.list = ListType::from_str(&list)?;
                     }
                 }
 
                 "--manga" => options.list = ListType::Manga,
                 "--anime" => options.list = ListType::Anime,
+
+                "--sort" => {
+                    if let Some(sort) = args.next() {
+                        options.sort = Sort::from_str(&sort)?;
+                    }
+                }
 
                 v => {
                     if v.starts_with("-") {
@@ -86,6 +93,7 @@ pub struct Options {
     pub save: bool,
     pub user: String,
     pub list: ListType,
+    pub sort: Sort,
 }
 
 impl From<InputOptions> for Options {
@@ -94,6 +102,7 @@ impl From<InputOptions> for Options {
             save: input.save,
             user: input.user.unwrap(),
             list: input.list,
+            sort: input.sort,
         }
     }
 }
@@ -108,7 +117,7 @@ impl FromStr for ListType {
     type Err = String;
 
     fn from_str(s: &str) -> Result<ListType> {
-        match &s.to_lowercase()[..] {
+        match s.to_lowercase().as_str() {
             "manga" => Ok(ListType::Manga),
             "anime" => Ok(ListType::Anime),
             val => Err(String::from(Error::ListError(String::from(val)))),
@@ -142,6 +151,7 @@ impl Config {
 pub enum Error {
     ArgumentError(String),
     ListError(String),
+    SortError(String),
     FileError(PathBuf, io::Error),
     FileReadError(PathBuf, io::Error),
     FileWriteError(PathBuf, io::Error),
@@ -157,6 +167,9 @@ impl From<Error> for String {
             }
             Error::ListError(val) => {
                 format!("Unknown list type {}. allowed values: manga, anime", val)
+            }
+            Error::SortError(val) => {
+                format!("Unknown sort type {}. allowed values: asc, desc", val)
             }
             Error::FileError(val, err) => format!(
                 "An error occurred when trying to interact with file '{:?}'. {}",
@@ -238,6 +251,7 @@ pub enum HandledHow {
     NotFinished,
 }
 
+#[derive(Debug)]
 pub enum Sort {
     Asc,
     Desc,
@@ -248,6 +262,17 @@ impl Sort {
         match self {
             Sort::Asc => 1,
             Sort::Desc => -1,
+        }
+    }
+}
+
+impl FromStr for Sort {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self> {
+        match s.to_lowercase().as_str() {
+            "asc" => Ok(Sort::Asc),
+            "desc" => Ok(Sort::Desc),
+            val => Err(String::from(Error::SortError(String::from(val)))),
         }
     }
 }
