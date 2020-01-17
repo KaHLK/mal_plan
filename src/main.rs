@@ -143,22 +143,24 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut quitting = false;
     let mut remaining: Vec<Item> = vec![];
+    let mut clear = 0;
     for item in list {
         // TODO: Make printing prettier?
         if quitting {
             remaining.push(item);
             continue;
         }
-        term.write_line(&format!(
-            "Current {list:?}: {amount:>width$} | {title}",
-            list = options.list,
-            amount = item.amount,
-            title = item.title,
-            width = 4
-        ))?;
 
         loop {
+            term.write_line(&format!(
+                "Current {list:?}: {amount:>4} | {id:>7} | {title}",
+                list = options.list,
+                amount = item.amount,
+                title = item.title,
+                id = item.id,
+            ))?;
             term.write_line("\nWhat do you want to do? (d/e/n/s/h/q)")?;
+            clear += 3;
             match term.read_char()? {
                 'd' => {
                     handled.push(item.handle(HandledHow::Added));
@@ -177,16 +179,20 @@ fn main() -> Result<(), Box<dyn Error>> {
                     break;
                 }
                 'h' => {
+                    term.clear_last_lines(clear)?;
                     term.write_line(
-                        "\nYou can do the following:
+                        "
+You can do the following:
     d: Mark the current item as 'downloaded'
     e: Mark the current item as 'not found'
     n: Mark the current item as 'not finished'
     s: Skip the current item
     h: Display the current message
 
-    q: Quit",
+    q: Quit
+",
                     )?;
+                    clear = 10;
                     continue;
                 }
                 'q' => {
@@ -194,10 +200,15 @@ fn main() -> Result<(), Box<dyn Error>> {
                     break;
                 }
                 v => {
+                    term.clear_last_lines(clear)?;
                     term.write_line(&format!("Unknown input '{}'. Press 'h' for help", v))?;
+                    clear = 1;
                 }
             }
         }
+
+        term.clear_last_lines(clear)?;
+        clear = 0;
     }
 
     write_handled_items(data_dir, &handled)?;
