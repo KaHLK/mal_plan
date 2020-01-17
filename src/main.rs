@@ -4,7 +4,7 @@ use std::time::SystemTime;
 use mal_plan::manga;
 use mal_plan::{
     read_handled_items, write_handled_items, Cache, Config, HandledHow, HandledItem, InputOptions,
-    Item, ListType, Options, Sort,
+    Item, ListType, Options,
 };
 
 use console::Term;
@@ -17,7 +17,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut options = InputOptions::from_args()?;
 
     if options.help {
-        // TODO: Impl
         println!(
             "MAL_plan; a small tool to view the items currently completed on your
 MyAnimeList anime or manga list, and plan what to do with it accordingly.
@@ -25,12 +24,14 @@ MyAnimeList anime or manga list, and plan what to do with it accordingly.
 USAGE: mal_plan [options]
 
 OPTIONS:
-    -s, --save  Save the current options to a config file and use in following usages.
-    --user      The user for whose lists will be used [Saved by --save].
-    --list      Specify the list to be fetched. Available options are: Anime, Manga [Default].
-    --anime     Shorthand for: --list anime.
-    --manga     SHorthand for: --list manga.
-    --sort      Sort the list by chapter count in the direction specified. Available options are: Asc, Desc [Default].
+    -s, --save           Save the current options to a config file and use in following usages.
+    --user               The user for whose lists will be used [Saved by --save].
+    --list               Specify the list to be fetched. Available options are: Anime, Manga [Default].
+    --anime              Shorthand for: --list anime.
+    --manga              Shorthand for: --list manga.
+    --sort               Sort the list by chapter count in the direction specified. Available options are: Asc, Desc [Default].
+    -n, --no-cache       Ignore the cache and fetch list again.
+    -i, --ignore-config  Ignore the config file and go with the defaults for anything not specified.
 
     -h, --help  Display this message.
         "
@@ -51,7 +52,7 @@ OPTIONS:
     let config = Config::read(config_dir);
 
     if let Some(config) = config {
-        if options.user.is_none() {
+        if options.user.is_none() && !options.ignore_config {
             options.user = Some(config.user);
         }
     }
@@ -92,17 +93,21 @@ OPTIONS:
     let handled = read_handled_items(data_dir);
 
     // Check if cache has gotten stale
-    let (list, mut handled) = if let Some(cache) = cache
-        .filter(|c| c.user == options.user)
-        .map(|c| now.checked_sub(c.fetched_at).map(|diff| (c, diff)))
-        .flatten()
-        .and_then(|(c, diff)| {
-            if diff.as_secs() > MAX_CACHE_AGE {
-                None
-            } else {
-                Some(c)
-            }
-        }) {
+    let (list, mut handled) = if let Some(cache) = if options.no_cache {
+        None
+    } else {
+        cache
+            .filter(|c| c.user == options.user)
+            .map(|c| now.checked_sub(c.fetched_at).map(|diff| (c, diff)))
+            .flatten()
+            .and_then(|(c, diff)| {
+                if diff.as_secs() > MAX_CACHE_AGE {
+                    None
+                } else {
+                    Some(c)
+                }
+            })
+    } {
         // Cache is still fresh so use list from cache
         (cache.list, handled)
     } else {

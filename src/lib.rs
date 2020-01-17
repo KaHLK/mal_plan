@@ -22,7 +22,9 @@ pub struct InputOptions {
     pub list: ListType,
     pub help: bool,
     pub sort: Sort,
-    // TODO: Add the following options: no-cache, cache-age, handled-file, config-file, ignore-config
+    pub no_cache: bool,
+    pub ignore_config: bool,
+    // TODO: Add the following options: cache-age, handled-file, config-file
     // TODO: Add commands to take another look at not-found & not-finished
 }
 
@@ -34,6 +36,8 @@ impl<'a> InputOptions {
             list: ListType::Manga,
             help: false,
             sort: Sort::Desc,
+            no_cache: false,
+            ignore_config: false,
         };
 
         let mut args = env::args().into_iter().skip(1);
@@ -61,12 +65,17 @@ impl<'a> InputOptions {
                     }
                 }
 
+                "--no-cache" => options.set_no_cache(),
+                "--no-ignore-config" => options.set_ignore_config(),
+
                 v => {
                     if v.starts_with("-") {
                         for c in v.chars().skip(1) {
                             match c {
                                 'h' => options.set_help(),
                                 's' => options.set_save(),
+                                'n' => options.set_no_cache(),
+                                'i' => options.set_ignore_config(),
                                 _ => return Err(String::from(Error::ArgumentError(arg))),
                             }
                         }
@@ -87,6 +96,14 @@ impl<'a> InputOptions {
     fn set_save(&mut self) {
         self.save = true;
     }
+
+    fn set_no_cache(&mut self) {
+        self.no_cache = true;
+    }
+
+    fn set_ignore_config(&mut self) {
+        self.ignore_config = true;
+    }
 }
 
 pub struct Options {
@@ -94,6 +111,8 @@ pub struct Options {
     pub user: String,
     pub list: ListType,
     pub sort: Sort,
+    pub no_cache: bool,
+    pub ignore_config: bool,
 }
 
 impl From<InputOptions> for Options {
@@ -103,6 +122,8 @@ impl From<InputOptions> for Options {
             user: input.user.unwrap(),
             list: input.list,
             sort: input.sort,
+            ignore_config: input.ignore_config,
+            no_cache: input.no_cache,
         }
     }
 }
