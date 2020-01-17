@@ -18,6 +18,22 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     if options.help {
         // TODO: Impl
+        println!(
+            "MAL_plan; a small tool to view the items currently completed on your
+MyAnimeList anime or manga list, and plan what to do with it accordingly.
+
+USAGE: mal_plan [options]
+
+OPTIONS:
+    -s, --save  Save the current options to a config file and use in following usages.
+    --user      The user for whose lists will be used [Saved by --save].
+    --list      Specify the list to be fetched. Available options are: Anime, Manga [Default].
+    --anime     Shorthand for: --list anime.
+    --manga     SHorthand for: --list manga.
+
+    -h, --help  Display this message.
+        "
+        );
         return Ok(());
     }
 
