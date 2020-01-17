@@ -21,7 +21,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
-    let term = Term::stdout();
+    let term = Term::buffered_stdout();
 
     let project_dirs = match ProjectDirs::from("com", "kahlk", "mal_plan") {
         Some(dir) => dir,
@@ -40,7 +40,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     if options.user.is_none() {
-        term.write_line("Username must be specified. Please enter a username:")?;
+        println!("Username must be specified. Please enter a username:");
         loop {
             match term.read_line() {
                 Ok(input) => {
@@ -48,10 +48,10 @@ fn main() -> Result<(), Box<dyn Error>> {
                     break;
                 }
                 Err(e) => {
-                    term.write_str(&format!(
+                    println!(
                         "An error occurred parsing your input {}\nPlease try again:",
                         e
-                    ))?;
+                    );
                 }
             }
         }
@@ -141,6 +141,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         (list, handled)
     };
 
+    println!("Currently finished {:?}: {}", options.list, list.len());
+    println!("Already handled: {}\n", handled.len());
+
     let mut quitting = false;
     let mut remaining: Vec<Item> = vec![];
     let mut clear = 0;
@@ -161,6 +164,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             ))?;
             term.write_line("\nWhat do you want to do? (d/e/n/s/h/q)")?;
             clear += 3;
+            term.flush()?;
             match term.read_char()? {
                 'd' => {
                     handled.push(item.handle(HandledHow::Added));
