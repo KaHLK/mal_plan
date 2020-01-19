@@ -40,7 +40,7 @@ impl<'a> InputOptions {
             ignore_config: false,
         };
 
-        let mut args = env::args().into_iter().skip(1);
+        let mut args = env::args().skip(1);
         while let Some(arg) = args.next() {
             match &arg[..] {
                 "--help" => options.set_help(),
@@ -69,7 +69,7 @@ impl<'a> InputOptions {
                 "--no-ignore-config" => options.set_ignore_config(),
 
                 v => {
-                    if v.starts_with("-") {
+                    if v.starts_with('-') {
                         for c in v.chars().skip(1) {
                             match c {
                                 'h' => options.set_help(),

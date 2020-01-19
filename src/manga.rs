@@ -57,7 +57,7 @@ where
     loop {
         fun(offset);
         let mut manga = fetch_data(&user, offset as u16)?;
-        if manga.len() == 0 {
+        if manga.is_empty() {
             break;
         }
         list.append(&mut manga);
@@ -67,7 +67,7 @@ where
     Ok(list)
 }
 
-pub fn fetch_data(user: &String, offset: u16) -> Result<Vec<Manga>, Box<dyn Error>> {
+pub fn fetch_data(user: &str, offset: u16) -> Result<Vec<Manga>, Box<dyn Error>> {
     let url = format!(
         "https://myanimelist.net/mangalist/{user}/load.json?status=6&offset={offset}",
         user = user,

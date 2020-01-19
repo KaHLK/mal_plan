@@ -43,7 +43,7 @@ OPTIONS:
 
     let project_dirs = match ProjectDirs::from("com", "kahlk", "mal_plan") {
         Some(dir) => dir,
-        None => return Err("Failed to load config directory")?,
+        None => return Err("Failed to load config directory".into()),
     };
     let config_dir = project_dirs.config_dir();
     let cache_dir = project_dirs.cache_dir();
